@@ -83,7 +83,7 @@ class Playlist:
         #     vidString = "snowy"
         # }
         elif temp == 800:
-            if (data.weather[0].vidString == "01d"):
+            if (data.weather[0].icon == "01d"):
                 vidString = "sunny";
             else:
                 vidString = "normal";
