@@ -2,7 +2,17 @@
 # Author: Tony DiCola
 # License: GNU GPLv2, see LICENSE.txt
 import random
+import requests
+import json
 from typing import Optional, Union
+
+#const for oneAPI call
+lat = "40.39946"
+lon = "-80.01589"
+api_key = "354df9aa15dc96f28892023bb5d27f18"
+url = "https://api.openweathermap.org/data/2.5/onecall?lat=%s&lon=%s&appid=%s&units=metric" % (lat, lon, api_key)
+
+
 
 random.seed()
 
@@ -52,6 +62,7 @@ class Playlist:
         self._index = None
         self._next = None
 
+#change get next to choose from files based off of current weather
     def get_next(self, is_random, resume = False) -> Movie:
         """Get the next movie in the playlist. Will loop to start of playlist
         after reaching end.
@@ -60,38 +71,66 @@ class Playlist:
         if len(self._movies) == 0:
             return None
         
-        # Check if next movie is set and jump directly there:
-        if self._next is not None and self._next >= 0 and self._next <= self.length():
-            self._index=self._next
-            self._next = None
-            return self._movies[self._index]
+        response = requests.get(url)
+        data = json.loads(response.text)
         
-        # Start Random movie
-        if is_random:
-            self._index = random.randrange(0, self.length())
-        else:
-            # Start at the first movie or resume and increment through them in order.
-            if self._index is None:
-                if resume:
-                    try:
-                        with open('playlist_index.txt', 'r') as f:
-                            self._index = int(f.read())
-                    except FileNotFoundError:
-                        self._index = 0
-                else:
-                    self._index = 0
+        temp = int(data.weather[0].id);
+        
+        vidString = "";
+        if temp < 600:
+            vidString = "rainy"
+        # else if ( temp < 700){
+        #     vidString = "snowy"
+        # }
+        elif temp == 800:
+            if (data.weather[0].vidString == "01d"):
+                vidString = "sunny";
             else:
-                self._index += 1
+                vidString = "normal";
+        
+        else:
+            vidString = "normal";
+        
+        for i in range(len(self._movies)):
+            if vidString in self._movies[i].filename:
+                self._index = i;
+                self._next = self._movies[i];
+                return self._movies[i];
+            
+        
+        
+        # # Check if next movie is set and jump directly there:
+        # if self._next is not None and self._next >= 0 and self._next <= self.length():
+        #     self._index=self._next
+        #     self._next = None
+        #     return self._movies[self._index]
+        
+        # # Start Random movie
+        # if is_random:
+        #     self._index = random.randrange(0, self.length())
+        # else:
+        #     # Start at the first movie or resume and increment through them in order.
+        #     if self._index is None:
+        #         if resume:
+        #             try:
+        #                 with open('playlist_index.txt', 'r') as f:
+        #                     self._index = int(f.read())
+        #             except FileNotFoundError:
+        #                 self._index = 0
+        #         else:
+        #             self._index = 0
+        #     else:
+        #         self._index += 1
                 
-            # Wrap around to the start after finishing.
-            if self._index >= self.length():
-                self._index = 0
+        #     # Wrap around to the start after finishing.
+        #     if self._index >= self.length():
+        #         self._index = 0
 
-        if resume:
-            with open('playlist_index.txt','w') as f:
-                f.write(str(self._index))
+        # if resume:
+        #     with open('playlist_index.txt','w') as f:
+        #         f.write(str(self._index))
 
-        return self._movies[self._index]
+        return None;
     
     # sets next by filename or Movie object
     def set_next(self, thing: Union[Movie, str]):
